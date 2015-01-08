@@ -89,6 +89,12 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 	var x_pos = 0.0;
 	var y_pos = 0.0;
 	
+	// store bounding box
+	renderable_texts[id].bounds_x_min = at_x;
+	renderable_texts[id].bounds_x_max = at_x;
+	renderable_texts[id].bounds_y_max = at_y;
+	renderable_texts[id].bounds_y_min = at_y;
+	
 	for (var i = 0; i < len; i++) {
 		if ('\n' == str[i]) {
 			line_offset += scale_px / font_viewport_height;
@@ -113,10 +119,17 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 		y_pos = at_y - scale_px / font_viewport_height *
 			glyph_y_offsets[ascii_code] - line_offset;
 		
+		if (y_pos < renderable_texts[id].bounds_y_min) {
+			renderable_texts[id].bounds_y_min = y_pos;
+		}
+		
 		// move next glyph along to the end of this one
 		if (i + 1 < len) {
 			// upper-case letters move twice as far
 			curr_x += glyph_widths[ascii_code] * scale_px / font_viewport_width;
+			if (curr_x > renderable_texts[id].bounds_x_max) {
+				renderable_texts[id].bounds_x_max = curr_x;
+			}
 		}
 		// add 6 points and texture coordinates to buffers for each glyph
 		points_tmp.push (x_pos);
@@ -156,6 +169,12 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 	gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (texcoords_tmp),
 		gl.DYNAMIC_DRAW)
 	renderable_texts[id].point_count = curr_index * 6;
+	
+	renderable_texts[id].bounds_width = renderable_texts[id].bounds_x_max -
+		renderable_texts[id].bounds_x_min;
+	renderable_texts[id].bounds_height = renderable_texts[id].bounds_y_max -
+		renderable_texts[id].bounds_y_min;
+	console.log ("bounds width = " + renderable_texts[id].bounds_width);
 }
 
 //
