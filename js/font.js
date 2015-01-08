@@ -88,6 +88,7 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 	var curr_index = 0;
 	var x_pos = 0.0;
 	var y_pos = 0.0;
+	
 	for (var i = 0; i < len; i++) {
 		if ('\n' == str[i]) {
 			line_offset += scale_px / font_viewport_height;
@@ -229,3 +230,29 @@ function draw_texts () {
 	gl.enable (gl.DEPTH_TEST);
 }
 
+function draw_one_text (id) {
+	// always draw on-top of scene
+	gl.disable (gl.DEPTH_TEST);
+	gl.blendFunc (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.enable (gl.BLEND);
+	
+	gl.activeTexture (gl.TEXTURE0);
+	gl.bindTexture (gl.TEXTURE_2D, font_texture);
+	gl.useProgram (font_sp);
+	gl.uniform4f (font_text_colour_loc,
+		renderable_texts[id].r,
+		renderable_texts[id].g,
+		renderable_texts[id].b,
+		renderable_texts[id].a);
+	
+	gl.bindBuffer (gl.ARRAY_BUFFER, renderable_texts[id].points_vbo);
+	gl.vertexAttribPointer (0, 2, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer (gl.ARRAY_BUFFER, renderable_texts[id].texcoords_vbo);
+	gl.vertexAttribPointer (1, 2, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray (0);
+	gl.enableVertexAttribArray (1);
+	gl.drawArrays (gl.TRIANGLES, 0, renderable_texts[id].point_count);
+	gl.disableVertexAttribArray (0);
+	gl.disableVertexAttribArray (1);
+	gl.enable (gl.DEPTH_TEST);
+}
