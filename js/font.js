@@ -22,6 +22,7 @@ var font_sp;
 var font_vs = "shaders/font.vert";
 var font_fs = "shaders/font.frag";
 var font_text_colour_loc;
+var font_pos_loc;
 
 var glyph_widths = new Array ();
 var glyph_y_offsets = new Array ();
@@ -45,6 +46,7 @@ function init_text_rendering (viewport_width, viewport_height) {
 	gl.bindAttribLocation (font_sp, 1, "vt");
 	gl.linkProgram (font_sp);
 	font_text_colour_loc = get_uniform_loc (font_sp, "text_colour");
+	font_pos_loc = get_uniform_loc (font_sp, "pos");
 	font_viewport_width = viewport_width;
 	font_viewport_height = viewport_height;
 }
@@ -79,8 +81,8 @@ function load_font_meta (meta) {
 //
 // create a VBO from a string of text, using our font's glyph sizes to make a
 // set of quads
-function text_to_vbo (str, at_x, at_y, scale_px, id) {
-	var curr_x = at_x;
+function text_to_vbo (str, scale_px, id) {
+	var curr_x = 0.0;
 	var len = str.length;
 	var points_tmp = new Array ();
 	var texcoords_tmp = new Array ();
@@ -90,15 +92,15 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 	var y_pos = 0.0;
 	
 	// store bounding box
-	renderable_texts[id].bounds_x_min = at_x;
-	renderable_texts[id].bounds_x_max = at_x;
-	renderable_texts[id].bounds_y_max = at_y;
-	renderable_texts[id].bounds_y_min = at_y;
+	renderable_texts[id].bounds_x_min = renderable_texts[id].x;
+	renderable_texts[id].bounds_x_max = renderable_texts[id].x;
+	renderable_texts[id].bounds_y_max = renderable_texts[id].y;
+	renderable_texts[id].bounds_y_min = renderable_texts[id].y;
 	
 	for (var i = 0; i < len; i++) {
 		if ('\n' == str[i]) {
 			line_offset += scale_px / font_viewport_height;
-			curr_x = at_x;
+			curr_x = 0.0;
 			continue;
 		}
 	
@@ -116,19 +118,20 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 		
 		// work out position of glyphtriangle_width
 		x_pos = curr_x;
-		y_pos = at_y - scale_px / font_viewport_height *
+		y_pos = -scale_px / font_viewport_height *
 			glyph_y_offsets[ascii_code] - line_offset;
 		
-		if (y_pos < renderable_texts[id].bounds_y_min) {
-			renderable_texts[id].bounds_y_min = y_pos;
+		if (y_pos + renderable_texts[id].y < renderable_texts[id].bounds_y_min) {
+			renderable_texts[id].bounds_y_min = y_pos + renderable_texts[id].y;
 		}
 		
 		// move next glyph along to the end of this one
 		if (i + 1 < len) {
 			// upper-case letters move twice as far
 			curr_x += glyph_widths[ascii_code] * scale_px / font_viewport_width;
-			if (curr_x > renderable_texts[id].bounds_x_max) {
-				renderable_texts[id].bounds_x_max = curr_x;
+			if (curr_x + renderable_texts[id].x >
+				renderable_texts[id].bounds_x_max) {
+				renderable_texts[id].bounds_x_max = curr_x + renderable_texts[id].x;
 			}
 		}
 		// add 6 points and texture coordinates to buffers for each glyph
@@ -174,7 +177,6 @@ function text_to_vbo (str, at_x, at_y, scale_px, id) {
 		renderable_texts[id].bounds_x_min;
 	renderable_texts[id].bounds_height = renderable_texts[id].bounds_y_max -
 		renderable_texts[id].bounds_y_min;
-	console.log ("bounds width = " + renderable_texts[id].bounds_width);
 }
 
 //
@@ -199,7 +201,7 @@ function add_text (str, x, y, size_in_px, r, g, b, a) {
 	rstr.a = a;
 	renderable_texts.push (rstr);
 	
-	text_to_vbo (str, x, y, size_in_px, renderable_texts.length - 1);
+	text_to_vbo (str, size_in_px, renderable_texts.length - 1);
 	
 	console.log ("string " + (renderable_texts.length - 1) +
 		" added to render texts. " + "point count " + rstr.point_count);
@@ -209,8 +211,7 @@ function add_text (str, x, y, size_in_px, r, g, b, a) {
 
 function update_text (id, str) {
 	// just re-generate the existing VBOs and point count
-	text_to_vbo (str, renderable_texts[id].x, renderable_texts[id].y,
-		renderable_texts[id].size_px, id);
+	text_to_vbo (str, renderable_texts[id].size_px, id);
 }
 
 function change_text_colour (id, r, g, b, a) {
@@ -230,12 +231,12 @@ function draw_texts () {
 	gl.bindTexture (gl.TEXTURE_2D, font_texture);
 	gl.useProgram (font_sp);
 	for (var i = 0; i < renderable_texts.length; i++) {
+		gl.uniform2f (font_pos_loc, renderable_texts[i].x, renderable_texts[i].y);
 		gl.uniform4f (font_text_colour_loc,
 			renderable_texts[i].r,
 			renderable_texts[i].g,
 			renderable_texts[i].b,
 			renderable_texts[i].a);
-		
 		gl.bindBuffer (gl.ARRAY_BUFFER, renderable_texts[i].points_vbo);
 		gl.vertexAttribPointer (0, 2, gl.FLOAT, false, 0, 0);
 		gl.bindBuffer (gl.ARRAY_BUFFER, renderable_texts[i].texcoords_vbo);
@@ -258,6 +259,7 @@ function draw_one_text (id) {
 	gl.activeTexture (gl.TEXTURE0);
 	gl.bindTexture (gl.TEXTURE_2D, font_texture);
 	gl.useProgram (font_sp);
+	gl.uniform2f (font_pos_loc, renderable_texts[id].x, renderable_texts[id].y);
 	gl.uniform4f (font_text_colour_loc,
 		renderable_texts[id].r,
 		renderable_texts[id].g,
@@ -274,4 +276,9 @@ function draw_one_text (id) {
 	gl.disableVertexAttribArray (0);
 	gl.disableVertexAttribArray (1);
 	gl.enable (gl.DEPTH_TEST);
+}
+
+function set_text_position (id, x, y) {
+	renderable_texts[id].x = x;
+	renderable_texts[id].y = y;
 }
