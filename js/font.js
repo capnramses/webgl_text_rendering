@@ -11,6 +11,9 @@ txt_id = add_text (str, x, y, size_in_px, r, g, b, a)
 update_text (id, str)
 change_text_colour (id, r, g, b, a)
 draw_texts ()
+draw_one_text (id)
+set_text_position (id, x, y)
+set_text_centered_on (id, x, y)
 */
 
 var ATLAS_COLS = 16;
@@ -281,4 +284,10 @@ function draw_one_text (id) {
 function set_text_position (id, x, y) {
 	renderable_texts[id].x = x;
 	renderable_texts[id].y = y;
+}
+
+function set_text_centered_on (id, x, y) {
+	var width_clip = renderable_texts[id].bounds_width;
+	var left_offset = x - width_clip / 2;
+	set_text_position (id, left_offset, y);
 }

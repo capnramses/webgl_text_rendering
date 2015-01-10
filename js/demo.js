@@ -2,8 +2,8 @@
 // Example WebGL programme to test text rendering
 // Anton Gerdelan, 6 Jan 2015
 
-var font_img = "fonts/freemono.png"
-var font_meta = "fonts/freemono.meta"
+var font_img = "fonts/atlas.png"
+var font_meta = "fonts/atlas.meta"
 
 var canvas;
 var gl;
@@ -30,13 +30,14 @@ function main () {
 	// create a string of text to display
 	hello_id = add_text (
 		"Hello,\nis it me you're\nlooking for?",
-		-0.75, 0.5, 100.0, 0.5, 0.5, 1.0, 1.0);
+		-0.9, 0.5, 30.0, 0.2, 0.2, 0.2, 1.0);
 	
 	time_id = add_text (
 		"The time is:",
 		-1.0, 1.0, 75.0, 1.0, 0.0, 0.0, 1.0);
+	set_text_centered_on (time_id, 0.0, 0.0);
 	
-	gl.clearColor (0.2, 0.2, 0.2, 1.0);
+	gl.clearColor (0.95, 0.9, 0.85, 1.0);
 	gl.enable (gl.DEPTH_TEST);
 	gl.cullFace (gl.BACK);
 	gl.frontFace (gl.CCW);
@@ -66,6 +67,7 @@ function draw () {
 	var seconds = new Date().getTime() / 1000.0;
 	var str = "The time is: " + seconds;
 	update_text (time_id, str);
+	set_text_centered_on (time_id, 0.0, 0.0);
 	var r = Math.abs (Math.sin (seconds));
 	var g = Math.abs (Math.sin (seconds + 1.57));
 	change_text_colour (time_id, r, g, 0.0, 1.0);
